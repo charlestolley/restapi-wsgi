@@ -24,30 +24,3 @@ class Path:
 
     def __iter__ (self):
         return self.Iterator(self.path)
-
-class Tree:
-    def __init__ (self):
-        self.root = {}
-
-    def add (self, endpoint, path):
-        node = self.root
-
-        for segment in Path(path):
-            prev = node
-            node = node.setdefault(segment, {})
-
-        prev[segment] = endpoint
-
-    def find (self, path):
-        node = self.root
-        for segment in Path(path):
-            if isinstance(node, dict):
-                try:
-                    node = node[segment]
-                except KeyError:
-                    return
-            else:
-                return
-
-        if not isinstance(node, dict):
-            return node

@@ -2,7 +2,8 @@ import json
 import logging
 import sys
 
-from .path import Tree
+from .node import Node
+from .path import Path
 
 log = logging.getLogger(__name__)
 
@@ -16,7 +17,7 @@ METHODS = set(["GET"])
 
 class API:
     def __init__ (self):
-        self.tree = Tree()
+        self.root = Node()
 
     def __call__ (self, environ, start_response):
         try:
@@ -25,7 +26,15 @@ class API:
                 start_response("400 Bad Request", [])
                 return [b'']
 
-            endpoint = self.tree.find(environ["PATH_INFO"])
+            endpoint = None
+            node = self.root
+            for segment in Path(environ["PATH_INFO"]):
+                node = node.get(segment)
+                if node is None:
+                    break
+            else:
+                endpoint = node.endpoint
+
             if endpoint is None:
                 start_response("404 Not Found", [])
                 return [b'']
@@ -62,4 +71,13 @@ class API:
             return [b'']
 
     def endpoint (self, endpoint, path):
-        self.tree.add(endpoint, path)
+        node = self.root
+        for segment in Path(path):
+            child = node.get(segment)
+
+            if child is None:
+                child = node.add(segment)
+
+            node = child
+
+        node.endpoint = endpoint
