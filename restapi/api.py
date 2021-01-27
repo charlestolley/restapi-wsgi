@@ -28,8 +28,9 @@ class API:
 
             endpoint = None
             node = self.root
-            for segment in Path(environ["PATH_INFO"]):
-                node = node.get(segment)
+            path = environ["PATH_INFO"]
+            for start, end in Path(path):
+                node = node.get(path[start:end])
                 if node is None:
                     break
             else:
@@ -72,7 +73,8 @@ class API:
 
     def endpoint (self, endpoint, path):
         node = self.root
-        for segment in Path(path):
+        for start, end in Path(path):
+            segment = path[start:end]
             child = node.get(segment)
 
             if child is None:

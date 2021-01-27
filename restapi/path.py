@@ -2,22 +2,21 @@ class Path:
     class Iterator:
         def __init__ (self, path):
             self.path = path
-            self.start = 1
-            self.end = 0
+            self.start = 0
+            self.end = None
 
         def __next__ (self):
-            if self.end < 0:
+            if self.start >= len(self.path):
                 raise StopIteration()
 
             self.end = self.path.find("/", self.start)
 
             if self.end < 0:
-                segment = self.path[self.start:]
-            else:
-                segment = self.path[self.start:self.end]
-                self.start = self.end+1
+                self.end = len(self.path)
 
-            return segment
+            result = (self.start, self.end)
+            self.start = self.end + 1
+            return result
 
     def __init__ (self, path):
         self.path = path
