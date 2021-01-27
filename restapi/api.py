@@ -4,6 +4,7 @@ import sys
 
 from .node import Node
 from .utils import LazySplit
+from .wsgi import Application
 
 log = logging.getLogger(__name__)
 
@@ -18,6 +19,7 @@ METHODS = set(["GET"])
 
 class API:
     def __init__ (self):
+        self.path = ""
         self.root = Node()
 
     def __call__ (self, environ, start_response):
@@ -28,11 +30,18 @@ class API:
                 return [b'']
 
             endpoint = None
-            node = self.root
+            node = self
             path = environ["PATH_INFO"]
             for start, end in LazySplit(path, CHAR):
                 node = node.get(path[start:end])
-                if node is None:
+                if isinstance(node, Application):
+                    if end < len(path):
+                        environ["SCRIPT_NAME"] += path[:end]
+                        environ["PATH_INFO"] = path[end:]
+                        return node(environ, start_response)
+                    else:
+                        break
+                elif node is None:
                     break
             else:
                 endpoint = node.endpoint
@@ -73,7 +82,7 @@ class API:
             return [b'']
 
     def endpoint (self, endpoint, path):
-        node = self.root
+        node = self
         for start, end in LazySplit(path, CHAR):
             segment = path[start:end]
             child = node.get(segment)
@@ -84,3 +93,37 @@ class API:
             node = child
 
         node.endpoint = endpoint
+
+    def wsgi (self, app, path):
+        node = None
+        child = self
+        for start, end in LazySplit(path, CHAR):
+            if child is None:
+                child = node.add(name)
+
+            node = child
+            name = path[start:end]
+            child = node.get(name)
+
+        if child is not None:
+            msg = "Cannot add WSGI application at \"{}\": {}".format(
+                path,
+                "path already in use by {}".format(
+                    self.__class__.__name__
+                )
+            )
+
+            raise ValueError(msg)
+
+        if not name:
+            msg = "Application path may not end in '{}'".format(CHAR)
+            raise ValueError(msg)
+
+        node.add(name, Application(app))
+
+    def add (self, name, child=None):
+        raise ValueError ("All paths must begin with '{}'".format(CHAR))
+
+    def get (self, name):
+        if name == self.path:
+            return self.root
