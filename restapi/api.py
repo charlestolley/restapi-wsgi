@@ -32,15 +32,15 @@ class API:
             node = self
             path = environ["PATH_INFO"]
             for start, end in LazySplit(path, CHAR):
-                node = node.get(path[start:end])
                 if isinstance(node, Application):
-                    if end < len(path):
-                        environ["SCRIPT_NAME"] += path[:end]
-                        environ["PATH_INFO"] = path[end:]
-                        return node(environ, start_response)
-                    else:
-                        break
-                elif node is None:
+                    split = start - len(CHAR)
+                    environ["SCRIPT_NAME"] += path[:split]
+                    environ["PATH_INFO"] = path[split:]
+                    return node(environ, start_response)
+
+                node = node.get(path[start:end])
+
+                if node is None:
                     break
             else:
                 endpoint = node.endpoint
