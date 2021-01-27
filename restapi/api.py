@@ -3,10 +3,11 @@ import logging
 import sys
 
 from .node import Node
-from .path import Path
+from .utils import LazySplit
 
 log = logging.getLogger(__name__)
 
+CHAR = "/"
 CODES = {
     200: "OK",
     201: "Created",
@@ -29,7 +30,7 @@ class API:
             endpoint = None
             node = self.root
             path = environ["PATH_INFO"]
-            for start, end in Path(path):
+            for start, end in LazySplit(path, CHAR):
                 node = node.get(path[start:end])
                 if node is None:
                     break
@@ -73,7 +74,7 @@ class API:
 
     def endpoint (self, endpoint, path):
         node = self.root
-        for start, end in Path(path):
+        for start, end in LazySplit(path, CHAR):
             segment = path[start:end]
             child = node.get(segment)
 
