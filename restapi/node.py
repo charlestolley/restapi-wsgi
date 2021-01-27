@@ -5,8 +5,8 @@ class Node:
     tree may have an associated endpoint, and may have any number of children
     nodes. An object is considered Node-like if it defines add() and get()
     functions that can be called using the same arguments given for those
-    functions in this class, and also has attributes for endpoint and path,
-    as described below.
+    functions in this class. It should also define the endpoint attribute,
+    but depending on usage, that may not be necessary.
 
     Attributes:
         endpoint: the resource class associated with the current path, or None
@@ -54,12 +54,3 @@ class Node:
             return self.children[name]
         except KeyError:
             return None
-
-    @property
-    def path (self):
-        """This node's path relative to the root of the main tree"""
-
-        if self.parent is None:
-            return self.name
-
-        return '/'.join(self.parent.path, self.name)

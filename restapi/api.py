@@ -19,7 +19,6 @@ METHODS = set(["GET"])
 
 class API:
     def __init__ (self):
-        self.path = ""
         self.root = Node()
 
     def __call__ (self, environ, start_response):
@@ -125,5 +124,5 @@ class API:
         raise ValueError ("All paths must begin with '{}'".format(CHAR))
 
     def get (self, name):
-        if name == self.path:
+        if name == "":
             return self.root
