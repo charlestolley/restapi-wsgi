@@ -2,6 +2,7 @@ import json
 import logging
 import sys
 
+from .error import HTTPError
 from .http import CODES
 from .node import Node
 from .utils import LazySplit
@@ -12,16 +13,54 @@ log = logging.getLogger(__name__)
 CHAR = "/"
 METHODS = set(["GET"])
 
+def BadRequest (*args, **kwargs):
+    return HTTPError(400, *args, **kwargs)
+
+def NotFound (*args, **kwargs):
+    return HTTPError(404, *args, **kwargs)
+
+def MethodNotAllowerd (*args, **kwargs):
+    return HTTPError(405, *args, **kwargs)
+
+def InternalServerError (*args, **kwargs):
+    return HTTPError(500, *args, **kwargs)
+
+class DefaultHandler:
+    def handle (self, exception):
+        return {
+            "message": exception.message,
+            "status_code": exception.code,
+        }, exception.code
+
 class API:
     def __init__ (self):
+        self.handler = DefaultHandler()
         self.root = Node()
 
     def __call__ (self, environ, start_response):
         try:
+            try:
+                return self.call(environ, start_response)
+
+            except HTTPError as e:
+                log.info("{}: {}".format(e.__class__.__name__, e.message))
+                return self.respond(start_response, self.handler.handle(e))
+
+        except Exception as e:
+            log.exception("Caught Exception while handling HTTPError")
+            start_response(
+                "500 Internal Server Error",
+                [],
+                exc_info=sys.exc_info()
+            )
+
+            return [b'']
+
+    def call (self, environ, start_response):
+        try:
             method = environ["REQUEST_METHOD"]
             if method not in METHODS:
-                start_response("400 Bad Request", [])
-                return [b'']
+                raise BadRequest("Unsupported method: \"{}\"".format(method))
 
             endpoint = None
             node = self
@@ -41,39 +80,33 @@ class API:
                 endpoint = node.endpoint
 
             if endpoint is None:
-                start_response("404 Not Found", [])
-                return [b'']
+                raise NotFound()
 
             resource = endpoint()
             try:
                 func = getattr(resource, method.lower())
             except AttributeError:
-                start_response("405 Method Not Allowed", [])
-                return [b'']
+                raise MethodNotAllowed()
 
-            response = func()
-            if (isinstance(response, tuple) and len(response) == 2 and
-                                                isinstance(response[1], int)):
-                response, code = response
-            else:
-                code = 200
-
-            status = str(code)
-
-            try:
-                message = CODES[code]
-            except KeyError:
-                pass
-            else:
-                status += " " + message
-
-            start_response(status, [])
-            return [json.dumps(response).encode("latin-1")]
+            return self.respond(start_response, func())
 
         except Exception as e:
             log.exception("Unhandled " + e.__class__.__name__)
-            start_response("500 Internal Server Error", [], sys.exc_info())
-            return [b'']
+            raise InternalServerError()
+
+    def respond (self, start_response, args, **kwargs):
+        if isinstance(args, tuple):
+            return self._respond(start_response, *args, **kwargs)
+        else:
+            return self._respond(start_response, args, **kwargs)
+
+    def _respond (self, start_response, response, code=200, headers={}):
+        start_response(
+            "{} {}".format(code, CODES.get(code, "")),
+            list(headers.items()),
+        )
+
+        return [json.dumps(response).encode("latin-1")]
 
     def endpoint (self, endpoint, path):
         node = self
