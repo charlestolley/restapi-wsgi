@@ -2,6 +2,7 @@ import json
 import logging
 import sys
 
+from .http import CODES
 from .node import Node
 from .utils import LazySplit
 from .wsgi import Application
@@ -9,12 +10,6 @@ from .wsgi import Application
 log = logging.getLogger(__name__)
 
 CHAR = "/"
-CODES = {
-    200: "OK",
-    201: "Created",
-    204: "No Content",
-}
-
 METHODS = set(["GET"])
 
 class API:
