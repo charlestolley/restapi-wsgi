@@ -46,7 +46,7 @@ class API:
                 log.info("{}: {}".format(e.__class__.__name__, e.message))
                 return self.respond(start_response, self.handler.handle(e))
 
-        except Exception as e:
+        except:
             log.exception("Caught Exception while handling HTTPError")
             start_response(
                 "500 Internal Server Error",
