@@ -5,6 +5,7 @@ import sys
 from .error import HTTPError
 from .http import CODES
 from .node import Node
+from .response import HTTPResponse
 from .utils import LazySplit
 from .wsgi import Application
 
@@ -15,10 +16,13 @@ METHODS = set(["GET"])
 
 class DefaultHandler:
     def handle (self, exception):
-        return {
-            "message": exception.message,
-            "status_code": exception.code,
-        }, exception.code
+        return HTTPResponse (
+            {
+                "message": exception.message,
+                "status_code": exception.code,
+            },
+            exception.code
+        )
 
 class API:
     def __init__ (self):
@@ -82,20 +86,17 @@ class API:
             log.exception("Unhandled " + e.__class__.__name__)
             raise HTTPError(500)
 
-    def respond (self, start_response, args, **kwargs):
-        if isinstance(args, tuple):
-            return self._respond(start_response, *args, **kwargs)
-        else:
-            return self._respond(start_response, args, **kwargs)
+    def respond (self, start_response, response):
+        if not isinstance(response, HTTPResponse):
+            response = HTTPResponse(response)
 
-    def _respond (self, start_response, response, code=200, headers={}):
         start_response(
-            "{} {}".format(code, CODES.get(code, "")),
-            list(headers.items()),
+            "{} {}".format(response.code, CODES.get(response.code, "")),
+            list(response.headers.items()),
             exc_info=sys.exc_info(),
         )
 
-        return [json.dumps(response).encode("latin-1")]
+        return [json.dumps(response.body).encode("latin-1")]
 
     def endpoint (self, endpoint, path):
         node = self
