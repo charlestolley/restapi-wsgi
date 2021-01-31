@@ -13,18 +13,6 @@ log = logging.getLogger(__name__)
 CHAR = "/"
 METHODS = set(["GET"])
 
-def BadRequest (*args, **kwargs):
-    return HTTPError(400, *args, **kwargs)
-
-def NotFound (*args, **kwargs):
-    return HTTPError(404, *args, **kwargs)
-
-def MethodNotAllowerd (*args, **kwargs):
-    return HTTPError(405, *args, **kwargs)
-
-def InternalServerError (*args, **kwargs):
-    return HTTPError(500, *args, **kwargs)
-
 class DefaultHandler:
     def handle (self, exception):
         return {
@@ -60,7 +48,7 @@ class API:
         try:
             method = environ["REQUEST_METHOD"]
             if method not in METHODS:
-                raise BadRequest("Unsupported method: \"{}\"".format(method))
+                raise HTTPError(400)
 
             endpoint = None
             node = self
@@ -80,19 +68,19 @@ class API:
                 endpoint = node.endpoint
 
             if endpoint is None:
-                raise NotFound()
+                raise HTTPError(404)
 
             resource = endpoint()
             try:
                 func = getattr(resource, method.lower())
             except AttributeError:
-                raise MethodNotAllowed()
+                raise HTTPError(405)
 
             return self.respond(start_response, func())
 
         except Exception as e:
             log.exception("Unhandled " + e.__class__.__name__)
-            raise InternalServerError()
+            raise HTTPError(500)
 
     def respond (self, start_response, args, **kwargs):
         if isinstance(args, tuple):
