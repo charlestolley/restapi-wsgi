@@ -104,6 +104,7 @@ class API:
         start_response(
             "{} {}".format(code, CODES.get(code, "")),
             list(headers.items()),
+            exc_info=sys.exc_info(),
         )
 
         return [json.dumps(response).encode("latin-1")]
