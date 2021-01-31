@@ -14,6 +14,13 @@ log = logging.getLogger(__name__)
 CHAR = "/"
 METHODS = set(["GET"])
 
+class DefaultEncoder:
+    def __init__ (self):
+        self.content_type = "application/json"
+
+    def encode (self, obj):
+        return json.dumps(obj, separators=(",",":"))
+
 class DefaultHandler:
     def handle (self, exception):
         return HTTPResponse (
@@ -26,6 +33,7 @@ class DefaultHandler:
 
 class API:
     def __init__ (self):
+        self.encoder = DefaultEncoder()
         self.handler = DefaultHandler()
         self.root = Node()
 
@@ -90,13 +98,22 @@ class API:
         if not isinstance(response, HTTPResponse):
             response = HTTPResponse(response)
 
-        start_response(
-            "{} {}".format(response.code, CODES.get(response.code, "")),
-            list(response.headers.items()),
-            exc_info=sys.exc_info(),
-        )
+        try:
+            status = "{} {}".format(response.code, CODES[response.code])
+        except KeyError:
+            status = str(response.code)
 
-        return [json.dumps(response.body).encode("latin-1")]
+        headers = list(response.headers.items())
+        body = self.encoder.encode(response.body).encode("latin-1")
+        headers.append(("Content-Length", str(len(body))))
+
+        try:
+            headers.append(("Content-Type", self.encoder.content_type))
+        except AttributeError:
+            pass
+
+        start_response(status, headers, exc_info=sys.exc_info())
+        return [body]
 
     def endpoint (self, endpoint, path):
         node = self
