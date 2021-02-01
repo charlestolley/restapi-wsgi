@@ -2,10 +2,10 @@ import json
 import logging
 import sys
 
-from .error import HTTPError
+from .error import HttpError
 from .http import CODES
 from .node import Node
-from .response import HTTPResponse
+from .response import HttpResponse
 from .utils import LazySplit
 from .wsgi import Application
 
@@ -23,7 +23,7 @@ class DefaultEncoder:
 
 class DefaultHandler:
     def handle (self, exception):
-        return HTTPResponse (
+        return HttpResponse (
             {
                 "message": exception.message,
                 "status_code": exception.code,
@@ -42,12 +42,12 @@ class API:
             try:
                 return self.call(environ, start_response)
 
-            except HTTPError as e:
+            except HttpError as e:
                 log.info("{}: {}".format(e.__class__.__name__, e.message))
                 return self.respond(start_response, self.handler.handle(e))
 
         except:
-            log.exception("Caught Exception while handling HTTPError")
+            log.exception("Caught Exception while handling HttpError")
             start_response(
                 "500 Internal Server Error",
                 [],
@@ -60,7 +60,7 @@ class API:
         try:
             method = environ["REQUEST_METHOD"]
             if method not in METHODS:
-                raise HTTPError(400)
+                raise HttpError(400)
 
             endpoint = None
             node = self
@@ -80,23 +80,23 @@ class API:
                 endpoint = node.endpoint
 
             if endpoint is None:
-                raise HTTPError(404)
+                raise HttpError(404)
 
             resource = endpoint()
             try:
                 func = getattr(resource, method.lower())
             except AttributeError:
-                raise HTTPError(405)
+                raise HttpError(405)
 
             return self.respond(start_response, func())
 
         except Exception as e:
             log.exception("Unhandled " + e.__class__.__name__)
-            raise HTTPError(500)
+            raise HttpError(500)
 
     def respond (self, start_response, response):
-        if not isinstance(response, HTTPResponse):
-            response = HTTPResponse(response)
+        if not isinstance(response, HttpResponse):
+            response = HttpResponse(response)
 
         try:
             status = "{} {}".format(response.code, CODES[response.code])
