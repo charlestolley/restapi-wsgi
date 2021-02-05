@@ -5,6 +5,7 @@ import sys
 from .error import HttpError
 from .http import CODES
 from .node import Node
+from .request import HttpRequest
 from .response import HttpResponse
 from .utils import LazySplit
 from .wsgi import Application
@@ -91,12 +92,27 @@ class API:
                 raise HttpError(404)
 
             resource = endpoint(*args)
+
             try:
-                func = getattr(resource, method.lower())
+                process = getattr(resource, method.lower())
             except AttributeError:
                 raise HttpError(405)
 
-            return self.respond(start_response, func())
+            headers = {}
+            for var in environ:
+                if not var.startswith("HTTP_"):
+                    continue
+
+                words = [word.capitalize() for word in var.split("_")[1:]]
+                header = "-".join(words)
+                headers[header] = environ[var]
+
+            request = HttpRequest(
+                headers=headers,
+                query=environ.get("QUERY_STRING", ""),
+            )
+
+            return self.respond(start_response, process(request))
 
         except Exception as e:
             log.exception("Unhandled " + e.__class__.__name__)
