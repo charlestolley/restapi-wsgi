@@ -66,11 +66,16 @@ class API:
             args = []
 
             node = self
-            path = environ["PATH_INFO"]
+            path = environ.get("PATH_INFO", "")
             for start, end in LazySplit(path, CHAR):
                 if isinstance(node, Application):
                     split = start - len(CHAR)
-                    environ["SCRIPT_NAME"] += path[:split]
+
+                    try:
+                        environ["SCRIPT_NAME"] += path[:split]
+                    except KeyError:
+                        environ["SCRIPT_NAME"] = path[:split]
+
                     environ["PATH_INFO"] = path[split:]
                     return node(environ, start_response)
 
