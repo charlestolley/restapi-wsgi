@@ -12,9 +12,7 @@ class Node:
         endpoint: the resource class associated with the current path, or None
     """
 
-    def __init__ (self, name="", parent=None):
-        self.name = name
-        self.parent = parent
+    def __init__ (self):
         self.children = {}
         self.endpoint = None
 
@@ -36,7 +34,7 @@ class Node:
             raise ValueError ("name already in use: \"{}\"".format(name))
 
         if child is None:
-            child = Node (name, self)
+            child = Node()
 
         self.children[name] = child
         return child
