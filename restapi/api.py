@@ -63,6 +63,8 @@ class API:
                 raise HttpError(400)
 
             endpoint = None
+            args = []
+
             node = self
             path = environ["PATH_INFO"]
             for start, end in LazySplit(path, CHAR):
@@ -73,16 +75,17 @@ class API:
                     return node(environ, start_response)
 
                 node = node.get(path[start:end])
-
                 if node is None:
                     break
+                elif hasattr(node, "value"):
+                    args.append(node.value)
             else:
                 endpoint = node.endpoint
 
             if endpoint is None:
                 raise HttpError(404)
 
-            resource = endpoint()
+            resource = endpoint(*args)
             try:
                 func = getattr(resource, method.lower())
             except AttributeError:
