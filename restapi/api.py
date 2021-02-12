@@ -13,7 +13,7 @@ from .wsgi import Application
 log = logging.getLogger(__name__)
 
 CHAR = "/"
-METHODS = set(["GET"])
+METHODS = set(["DELETE", "GET", "POST", "PUT"])
 
 class DefaultDecoder:
     def __init__ (self):
