@@ -15,6 +15,16 @@ log = logging.getLogger(__name__)
 CHAR = "/"
 METHODS = set(["GET"])
 
+class DefaultDecoder:
+    def __init__ (self):
+        self.content_type = "application/json"
+
+    def decode (self, body):
+        try:
+            return json.loads(body)
+        except json.decoder.JSONDecodeError:
+            raise HttpError(400, "Invalid request body")
+
 class DefaultEncoder:
     def __init__ (self):
         self.content_type = "application/json"
@@ -34,6 +44,7 @@ class DefaultHandler:
 
 class API:
     def __init__ (self):
+        self.decoder = DefaultDecoder()
         self.encoder = DefaultEncoder()
         self.handler = DefaultHandler()
         self.root = Node()
@@ -61,7 +72,7 @@ class API:
         try:
             method = environ["REQUEST_METHOD"]
             if method not in METHODS:
-                raise HttpError(400)
+                raise HttpError(400, "Unknown HTTP Method")
 
             endpoint = None
             args = []
@@ -107,11 +118,24 @@ class API:
                 header = "-".join(words)
                 headers[header] = environ[var]
 
-            request = HttpRequest(
-                headers=headers,
-                query=environ.get("QUERY_STRING", ""),
-            )
+            kwargs = {}
 
+            try:
+                kwargs["query"] = environ["QUERY_STRING"]
+            except KeyError:
+                pass
+
+            stream = environ["wsgi.input"]
+            char = stream.read(1)
+
+            if char:
+                content_type = environ.get("CONTENT_TYPE")
+                if content_type and content_type != self.decoder.content_type:
+                    raise HttpError(400, "Unsupported Content-Type")
+
+                kwargs["body"] = self.decoder.decode(char + stream.read())
+
+            request = HttpRequest(headers=headers, **kwargs)
             return self.respond(start_response, process(request))
 
         except Exception as e:
