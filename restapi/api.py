@@ -163,7 +163,7 @@ class API:
         start_response(status, headers, exc_info=sys.exc_info())
         return [body]
 
-    def endpoint (self, endpoint, path):
+    def endpoint (self, path, endpoint):
         node = self
         for start, end in LazySplit(path, CHAR):
             segment = path[start:end]
@@ -176,7 +176,7 @@ class API:
 
         node.endpoint = endpoint
 
-    def wsgi (self, app, path):
+    def wsgi (self, path, app):
         node = None
         child = self
         for start, end in LazySplit(path, CHAR):
